@@ -163,6 +163,16 @@ class InputBatch:
             self.frequency_penalties_cpu_tensor.numpy()
         self.frequency_penalties_reqs: set[str] = set()
 
+        self.entropy_penalties = torch.empty((max_num_reqs, ),
+                                              dtype=torch.float,
+                                              device=device)
+        self.entropy_penalties_cpu_tensor = torch.empty((max_num_reqs, ),
+                                                         dtype=torch.float,
+                                                         device="cpu",
+                                                         pin_memory=pin_memory)
+        self.entropy_penalties_cpu = self.entropy_penalties_cpu_tensor.numpy()
+        self.entropy_penalties_reqs: set[str] = set()
+
         # Presence penalty related data structures
         self.presence_penalties = torch.empty((max_num_reqs, ),
                                               dtype=torch.float,
@@ -290,6 +300,10 @@ class InputBatch:
         self.min_p_cpu[req_index] = sampling_params.min_p
         self.frequency_penalties_cpu[
             req_index] = sampling_params.frequency_penalty
+        self.entropy_penalties_cpu[
+            req_index] = sampling_params.entropy_penalty
+        if sampling_params.entropy_penalty != 0.0:
+            self.entropy_penalties_reqs.add(req_id)
         if sampling_params.min_p > _SAMPLING_EPS:
             self.min_p_reqs.add(req_id)
         if sampling_params.frequency_penalty != 0.0:
@@ -370,6 +384,7 @@ class InputBatch:
         self.min_p_reqs.discard(req_id)
         self.min_tokens.pop(req_index, None)
         self.frequency_penalties_reqs.discard(req_id)
+        self.entropy_penalties_reqs.discard(req_id)
         self.presence_penalties_reqs.discard(req_id)
         self.repetition_penalties_reqs.discard(req_id)
         self.generators.pop(req_index, None)
@@ -420,6 +435,8 @@ class InputBatch:
             self.top_k_cpu[i2], self.top_k_cpu[i1]
         self.frequency_penalties_cpu[i1], self.frequency_penalties_cpu[i2] =\
             self.frequency_penalties_cpu[i2], self.frequency_penalties_cpu[i1]
+        self.entropy_penalties_cpu[i1], self.entropy_penalties_cpu[i2] =\
+            self.entropy_penalties_cpu[i2], self.entropy_penalties_cpu[i1]
         self.presence_penalties_cpu[i1], self.presence_penalties_cpu[i2] =\
             self.presence_penalties_cpu[i2], self.presence_penalties_cpu[i1]
         self.repetition_penalties_cpu[i1], self.repetition_penalties_cpu[i2] =\
@@ -500,6 +517,8 @@ class InputBatch:
             self.top_k_cpu[empty_index] = self.top_k_cpu[last_req_index]
             self.frequency_penalties_cpu[
                 empty_index] = self.frequency_penalties_cpu[last_req_index]
+            self.entropy_penalties_cpu[
+                empty_index] = self.entropy_penalties_cpu[last_req_index]
             self.presence_penalties_cpu[
                 empty_index] = self.presence_penalties_cpu[last_req_index]
             self.repetition_penalties_cpu[
@@ -561,7 +580,8 @@ class InputBatch:
                        self.presence_penalties, num_reqs)
             copy_slice(self.repetition_penalties_cpu_tensor,
                        self.repetition_penalties, num_reqs)
-
+            copy_slice(self.entropy_penalties_cpu_tensor,
+                       self.entropy_penalties, num_reqs)
             # The prompt tokens are used only for applying penalties during
             # the sampling process. Hence copy these tensors only when
             # there are requests which need penalties to be applied.
@@ -589,6 +609,7 @@ class InputBatch:
             frequency_penalties=self.frequency_penalties[:num_reqs],
             presence_penalties=self.presence_penalties[:num_reqs],
             repetition_penalties=self.repetition_penalties[:num_reqs],
+            entropy_penalties=self.entropy_penalties[:num_reqs],
             output_token_ids=cast(list[list[int]], self.req_output_token_ids),
             min_tokens=self.min_tokens,
             no_penalties=self.no_penalties,
@@ -666,7 +687,8 @@ class InputBatch:
     def no_penalties(self) -> bool:
         return (len(self.presence_penalties_reqs) == 0
                 and len(self.frequency_penalties_reqs) == 0
-                and len(self.repetition_penalties_reqs) == 0)
+                and len(self.repetition_penalties_reqs) == 0
+                and len(self.entropy_penalties_reqs) == 0)
 
     @property
     def max_num_logprobs(self) -> Optional[int]:

@@ -287,7 +287,7 @@ def compute_entropy(logits):
     entropy = -(probs * torch.log(probs + 1e-9)).sum(dim=-1)  # [num_seqs]
     return entropy
 
-def apply_entropy_penalties_torch(
+def apply_entropy_penalties_all(
     logits: torch.Tensor,
     prompt_mask: torch.Tensor,
     output_mask: torch.Tensor,
@@ -320,13 +320,14 @@ def apply_entropy_penalties_torch(
         penalty = penalty.unsqueeze(1)  # shape: [num_seqs, 1]
         logits.mul_(penalty)            # shape: [num_seqs, vocab_size]
 
-def apply_entropy_penalties_cuda(
-    logits: torch.Tensor,
-    prompt_mask: torch.Tensor,
-    output_mask: torch.Tensor,
-    penalty_strength: float
-) -> None:
-    raise NotImplementedError("CUDA entropy penalties not implemented. Using torch fallback.")
+# def apply_entropy_penalties_cuda(
+#     logits: torch.Tensor,
+#     prompt_mask: torch.Tensor,
+#     output_mask: torch.Tensor,
+#     entropy_penalties: torch.Tensor
+# ) -> None:
+#     apply_entropy_penalties_(logits, prompt_mask, output_mask,
+#                                           entropy_penalties)
 
 def apply_entropy_penalties(
     logits: torch.Tensor,
@@ -342,10 +343,11 @@ def apply_entropy_penalties(
         output_mask: [num_seqs, vocab_size]
         entropy_penalties: [num_seqs]
     """
-    if current_platform.is_cuda() and logits.is_contiguous():
-        apply_entropy_penalties_cuda(logits, prompt_mask, output_mask, entropy_penalties)
-    else:
-        apply_entropy_penalties_torch(logits, prompt_mask, output_mask, entropy_penalties)
+    # if current_platform.is_cuda() and logits.is_contiguous():
+    #     apply_entropy_penalties_cuda(logits, prompt_mask, output_mask, entropy_penalties)
+    # else:
+        # apply_entropy_penalties_torch(logits, prompt_mask, output_mask, entropy_penalties)
+    apply_entropy_penalties_all(logits, prompt_mask, output_mask, entropy_penalties)
 
 def apply_repetition_penalties_torch(
         logits: torch.Tensor, prompt_mask: torch.Tensor,
