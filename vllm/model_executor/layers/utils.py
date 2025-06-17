@@ -31,6 +31,7 @@ def apply_penalties(logits: torch.Tensor, prompt_tokens_tensor: torch.Tensor,
                     output_tokens_tensor: torch.Tensor,
                     presence_penalties: torch.Tensor,
                     frequency_penalties: torch.Tensor,
+                    entropy_penalties: torch.Tensor,
                     repetition_penalties: torch.Tensor) -> torch.Tensor:
     """
     Applies penalties in place to the logits tensor
@@ -43,6 +44,7 @@ def apply_penalties(logits: torch.Tensor, prompt_tokens_tensor: torch.Tensor,
     output_tokens_tensor: The output tokens tensor.
     presence_penalties: The presence penalties of shape (num_seqs, )
     frequency_penalties: The frequency penalties of shape (num_seqs, )
+    entropy_penalties: The entropy penalties of shape (num_seqs, )
     repetition_penalties: The repetition penalties of shape (num_seqs, )
     """
     num_seqs, vocab_size = logits.shape
@@ -52,9 +54,10 @@ def apply_penalties(logits: torch.Tensor, prompt_tokens_tensor: torch.Tensor,
         output_tokens_tensor, vocab_size, num_seqs)
 
     # Apply repetition penalties as a custom op
-    from vllm._custom_ops import apply_repetition_penalties
+    from vllm._custom_ops import apply_repetition_penalties, apply_entropy_penalties
     apply_repetition_penalties(logits, prompt_mask, output_mask,
                                repetition_penalties)
+    apply_entropy_penalties(logits, prompt_mask, output_mask, entropy_penalties)
 
     # We follow the definition in OpenAI API.
     # Refer to https://platform.openai.com/docs/api-reference/parameter-details

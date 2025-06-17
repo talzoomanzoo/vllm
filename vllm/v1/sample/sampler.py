@@ -198,6 +198,7 @@ class Sampler(nn.Module):
                 sampling_metadata.prompt_token_ids,
                 sampling_metadata.presence_penalties,
                 sampling_metadata.frequency_penalties,
+                sampling_metadata.entropy_penalties,
                 sampling_metadata.repetition_penalties,
                 sampling_metadata.output_token_ids,
             )

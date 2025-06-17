@@ -208,6 +208,7 @@ class SamplingParams(
     presence_penalty: float = 0.0
     frequency_penalty: float = 0.0
     repetition_penalty: float = 1.0
+    entropy_penalty: float = 0.0
     temperature: float = 1.0
     top_p: float = 1.0
     top_k: int = 0
@@ -255,6 +256,7 @@ class SamplingParams(
         presence_penalty: Optional[float] = 0.0,
         frequency_penalty: Optional[float] = 0.0,
         repetition_penalty: Optional[float] = 1.0,
+        entropy_penalty: Optional[float] = 0.0,
         temperature: Optional[float] = 1.0,
         top_p: Optional[float] = 1.0,
         top_k: int = 0,
@@ -298,6 +300,8 @@ class SamplingParams(
             if frequency_penalty is None else frequency_penalty,
             repetition_penalty=1.0
             if repetition_penalty is None else repetition_penalty,
+            entropy_penalty=0.0
+            if entropy_penalty is None else entropy_penalty,
             temperature=1.0 if temperature is None else temperature,
             top_p=1.0 if top_p is None else top_p,
             top_k=top_k,
@@ -407,6 +411,9 @@ class SamplingParams(
         if not -2.0 <= self.frequency_penalty <= 2.0:
             raise ValueError("frequency_penalty must be in [-2, 2], got "
                              f"{self.frequency_penalty}.")
+        if not -2.0 <= self.entropy_penalty <= 2.0:
+            raise ValueError("entropy_penalty must be in [-2, 2], got "
+                             f"{self.entropy_penalty}.")
         if self.repetition_penalty <= 0.0:
             raise ValueError(
                 "repetition_penalty must be greater than zero, got "
@@ -566,6 +573,7 @@ class SamplingParams(
             f"presence_penalty={self.presence_penalty}, "
             f"frequency_penalty={self.frequency_penalty}, "
             f"repetition_penalty={self.repetition_penalty}, "
+            f"entropy_penalty={self.entropy_penalty}, "
             f"temperature={self.temperature}, "
             f"top_p={self.top_p}, "
             f"top_k={self.top_k}, "

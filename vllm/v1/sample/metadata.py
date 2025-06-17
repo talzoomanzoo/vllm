@@ -28,6 +28,7 @@ class SamplingMetadata:
     frequency_penalties: torch.Tensor
     presence_penalties: torch.Tensor
     repetition_penalties: torch.Tensor
+    entropy_penalties: torch.Tensor
 
     output_token_ids: list[list[int]]
 

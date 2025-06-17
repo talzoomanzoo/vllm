@@ -5,12 +5,14 @@ import contextlib
 from typing import TYPE_CHECKING, Optional, Union
 
 import torch
+import torch.nn.functional as F
 import torch.library
 
 import vllm.envs as envs
 from vllm.logger import init_logger
 from vllm.platforms import current_platform
 from vllm.scalar_type import ScalarType
+
 
 logger = init_logger(__name__)
 
@@ -280,6 +282,70 @@ def fused_add_rms_norm(input: torch.Tensor, residual: torch.Tensor,
                        weight: torch.Tensor, epsilon: float) -> None:
     torch.ops._C.fused_add_rms_norm(input, residual, weight, epsilon)
 
+def compute_entropy(logits):
+    probs = F.softmax(logits, dim=-1)
+    entropy = -(probs * torch.log(probs + 1e-9)).sum(dim=-1)  # [num_seqs]
+    return entropy
+
+def apply_entropy_penalties_torch(
+    logits: torch.Tensor,
+    prompt_mask: torch.Tensor,
+    output_mask: torch.Tensor,
+    entropy_penalties: torch.Tensor
+) -> None:
+    """
+    Penalize logits based on entropy bounds. In-place.
+
+    Args:
+        logits: Tensor of shape [num_seqs, vocab_size]
+        prompt_mask: [num_seqs, vocab_size]
+        output_mask: [num_seqs, vocab_size]
+        entropy_penalties: [num_seqs]
+    """
+    with torch.no_grad():
+        entropy = compute_entropy(logits)  # [num_seqs]
+
+        # Compute penalty multiplier: >1 if out of bounds, 1.0 if within
+        penalty = torch.ones_like(entropy)
+
+        # For too-low entropy: flatten logits (encourage exploration)
+        penalty = torch.where(entropy < 1.0, #entropy_min
+                              1.0 + entropy_penalties, penalty)
+
+        # For too-high entropy: sharpen logits (encourage confidence)
+        penalty = torch.where(entropy > 4.0, #entropy_max
+                              1.0 - entropy_penalties, penalty)
+
+        # Expand to vocab dimension
+        penalty = penalty.unsqueeze(1)  # shape: [num_seqs, 1]
+        logits.mul_(penalty)            # shape: [num_seqs, vocab_size]
+
+def apply_entropy_penalties_cuda(
+    logits: torch.Tensor,
+    prompt_mask: torch.Tensor,
+    output_mask: torch.Tensor,
+    penalty_strength: float
+) -> None:
+    raise NotImplementedError("CUDA entropy penalties not implemented. Using torch fallback.")
+
+def apply_entropy_penalties(
+    logits: torch.Tensor,
+    prompt_mask: torch.Tensor,
+    output_mask: torch.Tensor,
+    entropy_penalties: torch.Tensor
+) -> None:
+    """Applies entropy penalties to logits in-place.
+
+    Args:
+        logits: [num_seqs, vocab_size]
+        prompt_mask: [num_seqs, vocab_size]
+        output_mask: [num_seqs, vocab_size]
+        entropy_penalties: [num_seqs]
+    """
+    if current_platform.is_cuda() and logits.is_contiguous():
+        apply_entropy_penalties_cuda(logits, prompt_mask, output_mask, entropy_penalties)
+    else:
+        apply_entropy_penalties_torch(logits, prompt_mask, output_mask, entropy_penalties)
 
 def apply_repetition_penalties_torch(
         logits: torch.Tensor, prompt_mask: torch.Tensor,
