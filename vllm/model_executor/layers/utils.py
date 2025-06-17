@@ -32,6 +32,8 @@ def apply_penalties(logits: torch.Tensor, prompt_tokens_tensor: torch.Tensor,
                     presence_penalties: torch.Tensor,
                     frequency_penalties: torch.Tensor,
                     entropy_penalties: torch.Tensor,
+                    entropy_min: torch.Tensor,
+                    entropy_max: torch.Tensor,
                     repetition_penalties: torch.Tensor) -> torch.Tensor:
     """
     Applies penalties in place to the logits tensor
@@ -57,7 +59,7 @@ def apply_penalties(logits: torch.Tensor, prompt_tokens_tensor: torch.Tensor,
     from vllm._custom_ops import apply_repetition_penalties, apply_entropy_penalties
     apply_repetition_penalties(logits, prompt_mask, output_mask,
                                repetition_penalties)
-    apply_entropy_penalties(logits, prompt_mask, output_mask, entropy_penalties)
+    apply_entropy_penalties(logits, prompt_mask, output_mask, entropy_min, entropy_max, entropy_penalties)
 
     # We follow the definition in OpenAI API.
     # Refer to https://platform.openai.com/docs/api-reference/parameter-details

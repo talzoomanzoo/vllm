@@ -291,6 +291,8 @@ def apply_entropy_penalties_all(
     logits: torch.Tensor,
     prompt_mask: torch.Tensor,
     output_mask: torch.Tensor,
+    entropy_min: torch.Tensor,
+    entropy_max: torch.Tensor,
     entropy_penalties: torch.Tensor
 ) -> None:
     """
@@ -309,11 +311,11 @@ def apply_entropy_penalties_all(
         penalty = torch.ones_like(entropy)
 
         # For too-low entropy: flatten logits (encourage exploration)
-        penalty = torch.where(entropy < 1.0, #entropy_min
+        penalty = torch.where(entropy < entropy_min, #entropy_min
                               1.0 + entropy_penalties, penalty)
 
         # For too-high entropy: sharpen logits (encourage confidence)
-        penalty = torch.where(entropy > 4.0, #entropy_max
+        penalty = torch.where(entropy > entropy_max, #entropy_max
                               1.0 - entropy_penalties, penalty)
 
         # Expand to vocab dimension
@@ -333,6 +335,8 @@ def apply_entropy_penalties(
     logits: torch.Tensor,
     prompt_mask: torch.Tensor,
     output_mask: torch.Tensor,
+    entropy_min: torch.Tensor,
+    entropy_max: torch.Tensor,
     entropy_penalties: torch.Tensor
 ) -> None:
     """Applies entropy penalties to logits in-place.
@@ -347,7 +351,7 @@ def apply_entropy_penalties(
     #     apply_entropy_penalties_cuda(logits, prompt_mask, output_mask, entropy_penalties)
     # else:
         # apply_entropy_penalties_torch(logits, prompt_mask, output_mask, entropy_penalties)
-    apply_entropy_penalties_all(logits, prompt_mask, output_mask, entropy_penalties)
+    apply_entropy_penalties_all(logits, prompt_mask, output_mask, entropy_min, entropy_max, entropy_penalties)
 
 def apply_repetition_penalties_torch(
         logits: torch.Tensor, prompt_mask: torch.Tensor,

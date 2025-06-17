@@ -274,6 +274,9 @@ class Sampler(nn.Module):
                                      sampling_tensors.output_tokens,
                                      sampling_tensors.presence_penalties,
                                      sampling_tensors.frequency_penalties,
+                                     sampling_tensors.entropy_penalties,
+                                     sampling_tensors.entropy_min,
+                                     sampling_tensors.entropy_max,
                                      sampling_tensors.repetition_penalties)
 
         # Use float32 to apply temperature scaling.

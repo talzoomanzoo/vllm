@@ -209,6 +209,8 @@ class SamplingParams(
     frequency_penalty: float = 0.0
     repetition_penalty: float = 1.0
     entropy_penalty: float = 0.0
+    entropy_min: float = 0.0
+    entropy_max: float = 0.0
     temperature: float = 1.0
     top_p: float = 1.0
     top_k: int = 0
@@ -257,6 +259,8 @@ class SamplingParams(
         frequency_penalty: Optional[float] = 0.0,
         repetition_penalty: Optional[float] = 1.0,
         entropy_penalty: Optional[float] = 0.0,
+        entropy_min: Optional[float] = 0.0,
+        entropy_max: Optional[float] = 0.0,
         temperature: Optional[float] = 1.0,
         top_p: Optional[float] = 1.0,
         top_k: int = 0,
@@ -302,6 +306,10 @@ class SamplingParams(
             if repetition_penalty is None else repetition_penalty,
             entropy_penalty=0.0
             if entropy_penalty is None else entropy_penalty,
+            entropy_min=0.0
+            if entropy_min is None else entropy_min,
+            entropy_max=0.0
+            if entropy_max is None else entropy_max,
             temperature=1.0 if temperature is None else temperature,
             top_p=1.0 if top_p is None else top_p,
             top_k=top_k,
@@ -411,9 +419,15 @@ class SamplingParams(
         if not -2.0 <= self.frequency_penalty <= 2.0:
             raise ValueError("frequency_penalty must be in [-2, 2], got "
                              f"{self.frequency_penalty}.")
-        if not -2.0 <= self.entropy_penalty <= 2.0:
-            raise ValueError("entropy_penalty must be in [-2, 2], got "
+        if not 0.0 <= self.entropy_penalty <= 2.0:
+            raise ValueError("entropy_penalty must be in [0, 2], got "
                              f"{self.entropy_penalty}.")
+        if not 0.0 <= self.entropy_min <= 1.0:
+            raise ValueError("entropy_min must be in [0, 1], got "
+                             f"{self.entropy_min}.")
+        if not 0.0 <= self.entropy_max <= 1.0:
+            raise ValueError("entropy_max must be in [0, 1], got "
+                             f"{self.entropy_max}.")
         if self.repetition_penalty <= 0.0:
             raise ValueError(
                 "repetition_penalty must be greater than zero, got "
@@ -574,6 +588,8 @@ class SamplingParams(
             f"frequency_penalty={self.frequency_penalty}, "
             f"repetition_penalty={self.repetition_penalty}, "
             f"entropy_penalty={self.entropy_penalty}, "
+            f"entropy_min={self.entropy_min}, "
+            f"entropy_max={self.entropy_max}, "
             f"temperature={self.temperature}, "
             f"top_p={self.top_p}, "
             f"top_k={self.top_k}, "

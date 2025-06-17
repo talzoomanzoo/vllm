@@ -29,6 +29,8 @@ def apply_all_penalties(
     presence_penalties: torch.Tensor,
     frequency_penalties: torch.Tensor,
     entropy_penalties: torch.Tensor,
+    entropy_min: torch.Tensor,
+    entropy_max: torch.Tensor,
     repetition_penalties: torch.Tensor,
     output_token_ids: list[list[int]],
 ) -> torch.Tensor:
@@ -40,7 +42,7 @@ def apply_all_penalties(
                                           logits.device)
     return apply_penalties(logits, prompt_token_ids, output_tokens_t,
                            presence_penalties, frequency_penalties,
-                           entropy_penalties,
+                           entropy_penalties, entropy_min, entropy_max,
                            repetition_penalties)
 
 

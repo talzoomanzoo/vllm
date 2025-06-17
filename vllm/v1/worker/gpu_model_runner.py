@@ -1926,6 +1926,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
             presence_penalties=dummy_tensors(0.1),
             repetition_penalties=dummy_tensors(0.1),
             entropy_penalties=dummy_tensors(0.1),
+            entropy_min=None,
+            entropy_max=None,
             output_token_ids=[[] for _ in range(num_reqs)],
             min_tokens={},
             logit_bias=[None for _ in range(num_reqs)],
