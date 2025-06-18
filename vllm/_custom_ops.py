@@ -309,20 +309,19 @@ def apply_entropy_penalties_all(
     with torch.no_grad():
         entropy = compute_entropy(logits)  # [num_seqs]
 
-        # Initialize temperature to 1.0 (no change)
-        temperature = torch.ones_like(entropy)
+        temperature = torch.full_like(entropy, 0.7)
 
         # If entropy is too low: increase temperature (soften distribution)
         temperature = torch.where(
             entropy < entropy_min,
-            1.0 + entropy_penalties * (entropy_min - entropy),
+            0.7 + entropy_penalties * (entropy_min - entropy),
             temperature
         )
 
         # If entropy is too high: decrease temperature (sharpen distribution)
         temperature = torch.where(
             entropy > entropy_max,
-            1.0 / (1.0 + entropy_penalties * (entropy - entropy_max)),
+            0.7 / (1.0 + entropy_penalties * (entropy - entropy_max)),
             temperature
         )
 
