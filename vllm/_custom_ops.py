@@ -296,31 +296,39 @@ def apply_entropy_penalties_all(
     entropy_penalties: torch.Tensor
 ) -> None:
     """
-    Penalize logits based on entropy bounds. In-place.
+    Adjust logits using temperature scaling to control entropy. In-place.
 
     Args:
         logits: Tensor of shape [num_seqs, vocab_size]
-        prompt_mask: [num_seqs, vocab_size]
-        output_mask: [num_seqs, vocab_size]
+        prompt_mask: [num_seqs, vocab_size] (unused here, included for interface consistency)
+        output_mask: [num_seqs, vocab_size] (unused here, included for interface consistency)
+        entropy_min: [num_seqs]
+        entropy_max: [num_seqs]
         entropy_penalties: [num_seqs]
     """
     with torch.no_grad():
         entropy = compute_entropy(logits)  # [num_seqs]
 
-        # Compute penalty multiplier: >1 if out of bounds, 1.0 if within
-        penalty = torch.ones_like(entropy)
+        # Initialize temperature to 1.0 (no change)
+        temperature = torch.ones_like(entropy)
 
-        # For too-low entropy: flatten logits (encourage exploration)
-        penalty = torch.where(entropy < entropy_min, #entropy_min
-                              1.0 + entropy_penalties, penalty)
+        # If entropy is too low: increase temperature (soften distribution)
+        temperature = torch.where(
+            entropy < entropy_min,
+            1.0 + entropy_penalties * (entropy_min - entropy),
+            temperature
+        )
 
-        # For too-high entropy: sharpen logits (encourage confidence)
-        penalty = torch.where(entropy > entropy_max, #entropy_max
-                              1.0 - entropy_penalties, penalty)
+        # If entropy is too high: decrease temperature (sharpen distribution)
+        temperature = torch.where(
+            entropy > entropy_max,
+            1.0 / (1.0 + entropy_penalties * (entropy - entropy_max)),
+            temperature
+        )
 
-        # Expand to vocab dimension
-        penalty = penalty.unsqueeze(1)  # shape: [num_seqs, 1]
-        logits.mul_(penalty)            # shape: [num_seqs, vocab_size]
+        # Apply temperature scaling to logits
+        logits.div_(temperature.unsqueeze(1))  # shape: [num_seqs, vocab_size]
+
 
 # def apply_entropy_penalties_cuda(
 #     logits: torch.Tensor,
